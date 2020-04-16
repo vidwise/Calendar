@@ -6,7 +6,7 @@
 @;  Descripcio: implementació de les rutines per 
 @;				treballar amb dates i calendaris.
 @;-----------------------------------------------------------------
-@;   programador/a 1: xxx.xxx@estudiants.urv.cat
+@;   programador/a 1: pedro.espadas@estudiants.urv.cat
 @;   programador/a 2: xxx.xxx@estudiants.urv.cat
 @;   programador/a 3: xxx.xxx@estudiants.urv.cat
 @; ----------------------------------------------------------------
@@ -25,7 +25,7 @@ DATE_MONTH_MASK     = 0b00000000000000000001111000000000
 DATE_DAY_MASK       = 0b00000000000000000000000111110000
 
 	@; Per poder fer "extensió de signe negatiu" de l'any: 
-DATE_YEAR_SIGN_EXT = 0b11110000000000000000000000000000
+DATE_YEAR_SIGN_EXT  = 0b11110000000000000000000000000000
 
 
 @;		POSICIÓ DE BITS INICIAL/LSB I FINAL/MSB :
@@ -70,7 +70,8 @@ create_date:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
-
+		
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
