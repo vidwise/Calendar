@@ -247,7 +247,7 @@ get_month:
 @;		R0: valor del camp 'dia' de la fc_date indicada (1..28/29/30/31)
 		.global get_day
 get_day:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
@@ -256,7 +256,7 @@ get_day:
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {pc}	@; recuperar de pila registres modificats i retornar
 
 
 
@@ -274,14 +274,52 @@ get_day:
 @;		R0: 1 si l'any indicat és de traspàs/bixest; 0 altrament
 		.global is_leap_year
 is_leap_year:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r5, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
-
-
+		
+		mov r3, r0  @; Movem al registre r3 per comoditat
+		cmp r3, #-46  @; Comparem amb -46
+		movlt r0, #0  @; No es any bixest
+		blt .LFiIsLeapYear  @; Fi funció
+		
+		@;Aquí continuem si es major o igual que -46
+		and r2, r3, #0b11  @; Si r2 = 0, any multiple de 4
+		cmp r2, #0  @; Mirem si es 0
+		moveq r2, #1  @; Si es 0 fiquem true
+		ldr r4, =1582  @; Carreguem constant (limiació ARM)
+		cmp r3, r4  @; comparem amb 1582
+		movle r0, r2  @; Si any menor o igual a 1582 carreguem a r0 si es multiple de 4 o no
+		ble .LFiIsLeapYear  @; I retornem
+		
+		@; Aquí continuem si l'any es major que 1582
+		@; Malabars de registres per a cridar a la funció per fer any % 100
+		mov r0, r3  @; Carreguem any a r0 (primer argument)
+		mov r1, #100  @; carreguem quocient a r1 (segon argument)
+		bl FCmod  @; r0 = any % 100
+		cmp r0, #0
+		moveq r4, #1  @; Si es igual llavors es múltiple de 100 (true)
+		
+		@; Malabars de registres per a cridar a la funció per fer any % 400
+		mov r0, r3  @; Carreguem any a r0 (primer argument)
+		mov r1, #400  @; carreguem quocient a r1 (segon argument)
+		bl FCmod  @; r0 = any % 400
+		cmp r0, #0
+		moveq r5, #1  @; Si es igual llavors es múltiple de 400 (true)
+		
+		@; r2: Multiplicitat amb 4
+		@; r4: Multiplicitat amb 100
+		@; r5: Multiplicitat amb 400
+		
+		mvn r4, r4  @; neguem multiplicitat amb 100
+		and r0, r2, r4  @; Fem la and. Se'ns maten tots els 1 useless que em creat a l'anterior funció
+		orr r0, r0, r5  @; Resultat final
+		
+		.LFiIsLeapYear:
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r5, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
