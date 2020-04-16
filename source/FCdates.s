@@ -145,12 +145,12 @@ is_after_Christ:
 @;		R0: valor absolut (magnitud) del camp 'any' de la fc_date indicada (1..9999)
 		.global get_year_magnitude
 get_year_magnitude:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		ldr r4, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
-		and r2, r0, r4  @; Ens quedem amb la info de l'any a r2
+		ldr r3, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
+		and r2, r0, r3  @; Ens quedem amb la info de l'any a r2
 		
 		and r1, r0, #DATE_YEAR_SIGN_MASK  @; Apliquem máscara de despres de Crist
 		cmp r1, #0  @; Mirem si hi ha bit de signe
@@ -170,8 +170,7 @@ get_year_magnitude:
 		mov r0, r2  @; Tornem info a r0 per fer el retorn de la rutina
 		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
-
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r3, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -189,7 +188,26 @@ get_year_Ca2:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		ldr r2, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
+		and r1, r0, r2  @; Ens quedem amb el camp year a r1
+		and r2, r1, #DATE_YEAR_SIGN_MASK  @; Ens quedem amb el signe 
+		cmp r2, #0  @; Mirem si no te signe
+		beq .LGetYearDespresDeCrist  
+		
+		@; Aqui tractem si té signe i per tant es un any abans de Crist
+		orr r1, r1, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
+		mov r1, r1, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
+		mvn r1, r1  @; Neguem bits (Ca1)
+		add r1, #1  @; Afegim 1  (Ca2)
+		b .LFiGetYearCa2  @; Anem al final de la funció
 
+		.LGetYearDespresDeCrist:
+		mov r1, r1, lsr #DATE_YEAR_LSB  @; Movem al lloc
+		
+		.LFiGetYearCa2:
+		@; and r1, r1, #0x0000FFFF  @; Forcem retornar un half-word
+		mov r0, r1  @; Per a fer el retorn de la funció
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
@@ -210,6 +228,7 @@ get_month:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		@;and r0, r0, #
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
