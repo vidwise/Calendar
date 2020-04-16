@@ -207,7 +207,7 @@ u8 days_in_month ( u8 mes, s16 any_Ca2 )
 			if ( !anyTraspas )
 				resultat = 28;
 			else
-				resultat =29;
+				resultat = 29;
 		}
 	}
 

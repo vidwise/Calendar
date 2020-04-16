@@ -312,7 +312,7 @@ is_leap_year:
 		@; r5: Multiplicitat amb 400
 		
 		mvn r4, r4  @; neguem multiplicitat amb 100
-		and r0, r2, r4  @; Fem la and. Se'ns maten tots els 1 useless que em creat a l'anterior funció
+		and r0, r2, r4  @; Fem la and. Se'ns maten tots els 1 useless que em creat a l'anterior instrucció
 		orr r0, r0, r5  @; Resultat final
 		
 		.LFiIsLeapYear:
@@ -337,8 +337,46 @@ days_in_month:
 		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
-
-
+		
+		mov r2, r0  @; Guardem mes a un altre lloc per comoditat
+		mov r0, #0  @; resultat incorrecte fins que no es demostri el contrari
+		
+		@; Any
+		ldr r3, =-9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r3
+		blt .LFiDaysInMonth  @; Fi funció
+		
+		ldr r3, =9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r3  
+		bhi .LFiDaysInMonth  @; Fi funció
+		
+		cmp r1, #0
+		beq .LFiDaysInMonth  @; Fi funció
+		
+		@; Mes
+		cmp r2, #1  
+		blt .LFiDaysInMonth  @; Fi funció
+		
+		cmp r2, #12
+		bhi .LFiDaysInMonth  @; Fi funció
+		
+		@; En aquest punt els arguments son valids i estem al else
+		sub r2, #1  @; Resta 1 a mes per a poder indexar amb ell a l'array
+		ldr r3, =diesPerMes  @; Carreguem @ del array diesPerMes
+		add r3, r2  @; Desplacem el punter fins la posicio que ens interessa
+		ldrb r0, [r3]  @; Carreguem un byte a r0 corresponent als dies d'aquell mes
+		cmp r2, #1  @; Mirem si es febrer. Hem restat 1, per aixo mirem amb 1
+		bne .LFiDaysInMonth  @; Si no ho es hem acabat
+		
+		@; Aqui tenim el suposit que es Febrer
+		@; Fem malabars per cridar a la funció
+		mov r3, r0  @; Guardem dies del mes (en aquest punt sera 28) a r3
+		mov r0, r1  @; Carreguem any per a passarli a la funció
+		bl is_leap_year  @; Cridem a la funció per saber si es bixest o no
+		add r0, r0, r3  @; Sumem el resultat i jasta... estalviem diverses instruccions
+		
+		.LFiDaysInMonth:
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
