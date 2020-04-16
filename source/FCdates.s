@@ -75,8 +75,9 @@ create_date:
 		cmp r1, #1
 		movlt r1, #1  @; Si any < 1 --> any = 1
 		
-		cmp r1, #9999  
-		movhi r1, #9999  @; Si any > 9999 --> any = 9999
+		ldr r4, =9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r4  
+		movhi r1, r4  @; Si any > 9999 --> any = 9999
 		
 		@; Mes
 		cmp r2, #1  
@@ -87,13 +88,13 @@ create_date:
 		
 		@; Dia
 		cmp r3, #1
-		movlt r3, #  @; Si dia < 1 --> dia = 1
+		movlt r3, #1  @; Si dia < 1 --> dia = 1
 		
 		@; caldrà veure quants dies té aquest mes per veure els dies superiors
 		
 		@; calcular any en Ca2. 
 		cmp r0, #1
-		beq .LFiAbansDeCrist  @; Si es després de Crist no cal fer res
+		beq .LFiAbansDeCrist  @; Si es després del naixement de Jesús no cal fer res
 		mvn r0, r0  @; Sino apliquem NOT sobre el registre (Ca1)
 		add r0, #1  @; I sumem 1 (Ca2)
 		.LFiAbansDeCrist:
@@ -147,8 +148,27 @@ get_year_magnitude:
 		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
-
-
+		
+		ldr r4, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
+		and r2, r0, r4  @; Ens quedem amb la info de l'any a r2
+		
+		and r1, r0, #DATE_YEAR_SIGN_MASK  @; Apliquem máscara de despres de Crist
+		cmp r1, #0  @; Mirem si hi ha bit de signe
+		beq .LAnyDespresDeCrist
+		
+		@; Aqui tractem si es un any després de Jesús
+		mov r2, r2, lsr #DATE_YEAR_LSB  @; Posem bits al lloc
+		b .LFiGetYear  @; Marxem
+		
+		.LAnyDespresDeCrist:  @; Tractem si es després de Crist
+		orr r2, r2, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
+		mov r2, r2, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
+		mvn r2, r2  @; Neguem bits (Ca1)
+		add r2, #1  @; Afegim 1  (Ca2)
+		
+		.LFiGetYear:
+		mov r0, r2  @; Tornem info a r0 per fer el retorn de la rutina
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
