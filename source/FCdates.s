@@ -95,8 +95,7 @@ create_date:
 		@; calcular any en Ca2. 
 		cmp r0, #1
 		beq .LFiAbansDeCrist  @; Si es després del naixement de Jesús no cal fer res
-		mvn r0, r0  @; Sino apliquem NOT sobre el registre (Ca1)
-		add r0, #1  @; I sumem 1 (Ca2)
+		neg r0, r0  @; Ca2
 		.LFiAbansDeCrist:
 		
 		@; //RF  FALTA CODIIII
@@ -163,8 +162,7 @@ get_year_magnitude:
 		.LAnyDespresDeCrist:  @; Tractem si es després de Crist
 		orr r2, r2, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
 		mov r2, r2, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
-		mvn r2, r2  @; Neguem bits (Ca1)
-		add r2, #1  @; Afegim 1  (Ca2)
+		neg r2, r2  @; Ca2
 		
 		.LFiGetYear:
 		mov r0, r2  @; Tornem info a r0 per fer el retorn de la rutina
@@ -197,8 +195,7 @@ get_year_Ca2:
 		@; Aqui tractem si té signe i per tant es un any abans de Crist
 		orr r1, r1, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
 		mov r1, r1, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
-		mvn r1, r1  @; Neguem bits (Ca1)
-		add r1, #1  @; Afegim 1  (Ca2)
+		neg r1, r1  @; Ca2
 		b .LFiGetYearCa2  @; Anem al final de la funció
 
 		.LGetYearDespresDeCrist:
@@ -334,7 +331,7 @@ is_leap_year:
 @;		R0: número de dies d'aquell mes (1..28/29/30/31) o 0 en cas de fora de rang
 		.global days_in_month
 days_in_month:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
@@ -379,7 +376,7 @@ days_in_month:
 		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r3, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -388,19 +385,50 @@ days_in_month:
 @; s8 get_century_Ca2 ( s16 any_Ca2 ) :
 @;	  Retorna el número de segle al qual pertany l'any indicat (0 en cas d'any fora de rang)
 @;  Paràmetres:
-@;		R01: valor de l'any (Ca2, rang esperat -9999..-1 / 1..9999) 
+@;		R0: valor de l'any (Ca2, rang esperat -9999..-1 / 1..9999) 
 @;	Resultat:
 @;		R0: segle al qual pertany l'any indicat (-100..-1 / +1..+100) o 0 en cas d'any fora de rang
 		.global get_century_Ca2
 get_century_Ca2:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r2, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
-
-
+		
+		mov r1, r0  @; Movem any a r1 per comoditat
+		mov r0, #0  @; Parametres incorrectes fins que no es demostri el contrari
+		
+		@; Any
+		ldr r2, =-9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r2
+		blt .LFiGetCentury  @; Fi funció
+		
+		ldr r2, =9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r2  
+		bhi .LFiGetCentury  @; Fi funció
+		
+		cmp r1, #0
+		beq .LFiGetCentury  @; Fi funció
+		
+		@; A partir d'aqui estem amb paràmetres correctes
+		
+		.LFiGetCentury:
+		cmp r1, #0  
+		neglt r1, r1  @; Si es un negatiu el convertim a positiu
+		movlt r2, #-1  @; Carreguem un -1 per a després
+		movhi r2, #1  @; Carreguem un 1 per a després
+		
+		@; Malabars de registres per cridar a la divisió
+		mov r0, r1  @; Carreguem any
+		sub r0, #1  @; Restem un 1
+		mov r1, #100  @; Carreguem quocient
+		bl FCdiv  @; A r0 tenim el resultat de la divisió
+		add r0, #1  @; Sumem 1 per corregir
+		mov r1, r0  @; Carreguem a un altre registre per a mul (limitació ARM)
+		mul r0, r1, r2  @; Multipliquem segons el que hagim carregat a r2 previament
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -420,6 +448,37 @@ week_day:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		@; Malabars de registres per a cridar a la funció
+		mov r3, r0  @; r3 --> dies
+		mov r4, r1  @; r4 --> mes (necessitem guardar-ho perque sino ho perdrem)
+		mov r0, r1  @; Per a cridar la func
+		mov r1, r2  @; Per a cridar la func. r2 --> any (no el matxacarem)
+		bl days_in_month  @; r0 --> days in month
+		mov r1, r0  @; r1 --> days in month
+		
+		@; Checkegem parámetres
+		mov r0, #0  @; Els parametres son incorrectes fins que no es demostri el contrari
+		
+		cmp r1, #0  @; Comparem retorn amb 0 (codi error)
+		beq .LFiWeekDay
+		
+		cmp r3, #1  @; Comparem dies per si son menors de 1
+		blt .LFiWeekDay  @; Si ho són marxem de la funció
+		
+		cmp r3, r1  @; Mirem si els dies proporcionats estan fora de rang
+		bhi .LFiWeekDay  
+		
+		@; Aquí els paràmetres son correctes
+		@; Malabars de registres per a cridar a la funcio de divisio
+		mov r0, r3  @; Carreguem primer dies
+		mov r1, r4  @; Carreguem segon mes
+		@; a r2 ja hi tenim l'any ben colocat
+		bl julian_day  @; r0 = numero de dies passats des del calendari julià
+		mov r1, #7  @; Carreguem un 7 de quocient
+		bl FCmod  @; r0 modul amb 7
+		add r0, #1  @; Corregim sumant 1 per a que 1 --> dilluns ... 7 --> diumenge
+		
+		.LFiWeekDay:
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
