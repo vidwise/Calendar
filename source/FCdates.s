@@ -70,7 +70,35 @@ create_date:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		@; Ajustat de valors
+		@; Any
+		cmp r1, #1
+		movlt r1, #1  @; Si any < 1 --> any = 1
 		
+		cmp r1, #9999  
+		movhi r1, #9999  @; Si any > 9999 --> any = 9999
+		
+		@; Mes
+		cmp r2, #1  
+		movlt r2, #1  @; Si mes < 1 --> mes = 1
+		
+		cmp r2, #12
+		movhi r2, #12  @; Si mes > 12 --> mes = 12
+		
+		@; Dia
+		cmp r3, #1
+		movlt r3, #  @; Si dia < 1 --> dia = 1
+		
+		@; caldrà veure quants dies té aquest mes per veure els dies superiors
+		
+		@; calcular any en Ca2. 
+		cmp r0, #1
+		beq .LFiAbansDeCrist  @; Si es després de Crist no cal fer res
+		mvn r0, r0  @; Sino apliquem NOT sobre el registre (Ca1)
+		add r0, #1  @; I sumem 1 (Ca2)
+		.LFiAbansDeCrist:
+		
+		@; //RF  FALTA CODIIII
 		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
@@ -91,14 +119,18 @@ create_date:
 @;		R0: 1 si la data indicada és després de Crist; 0 altrament
 		.global is_after_Christ
 is_after_Christ:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {r1, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
-
+		and r1, r0, #DATE_YEAR_SIGN_MASK  @; Apliquem máscara de "signe"
+		cmp r1, #0  @; Veiem si queda un 0 o no
+		moveq r0, #1  @; Si queda 0 no hi ha signe per tant després de Crist
+		movne r0, #0  @; Sino pues 1 perque si que és després de Crist
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
