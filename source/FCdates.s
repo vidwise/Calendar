@@ -224,15 +224,16 @@ get_year_Ca2:
 @;		R0: valor del camp 'mes' de la fc_date indicada (1..12)
 		.global get_month
 get_month:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
+		push {lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
-		@;and r0, r0, #
+		and r0, r0, #DATE_MONTH_MASK
+		mov r0, r0, lsr #DATE_MONTH_LSB
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+		pop {pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -250,6 +251,8 @@ get_day:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		and r0, r0, #DATE_DAY_MASK
+		mov r0, r0, lsr #DATE_DAY_LSB
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
