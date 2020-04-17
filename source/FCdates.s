@@ -752,7 +752,7 @@ create_ascii_calendar:
 		mov r0, #0  @; index
 		mov r1, #32  @; espai
 		
-		.LBucleEspais
+		.LBucleEspais:
 		strb r1, [r6, r0]  @; Anem guardant espais al calendari
 		add r0, #1  @; incrementem index
 		
@@ -761,10 +761,26 @@ create_ascii_calendar:
 		
 		@; Generacio de la primera fila
 		
+		ldr r0, =monthNames  @; Punter a punters 
+		mov r2, #48  @; 12 punters, de 4 bytes cadascun (limitació mul)
+		mul r1, r9, r2  @; Generem index a l'array de punters de l'idioma que toca
+		add r0, r1  @; Anem fins al principi de l'array que correspongui segons idioma
+		sub r2, r4, #1  @; Restem 1 per indexar a l'array
+		mov r2, r2, lsl #2  @; Multipliquem per 4 perque son punters de 4 bytes
+		add r0, r2  @; Punter de punters del mes adequat en lidioma adequat
+		ldr r0, [r0]  @; Punter a l'array de caracters
+		mov r1, r0  @; Malabar de registres per cridar a str_length
+		bl str_length  @; r0 nombre de caracters a copiar
+		
+		mov r2, r0  @; Coloquem el nombre de caracters a copiar
+		mov r0, r1  @; Coloquem punter al string del nom del mes
+		mov r1, r6  @; Coloquem el punter al calendari
+		bl mem_copy  @; Copiem nom
+		add r6, r2  @; movem el punter la longitud de caracters que haguem copiar
 		
 		
 		
-		.LFiCreateCalendarASCII
+		.LFiCreateCalendarASCII:
 		
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
@@ -800,14 +816,20 @@ u32toString:
 		ldr r3, =mod  @; Carreguem @ residu
 		
 		@; Coloquem el negatiu i així ja ens oblidem
-		cmp r7, #0  @; Comparem amb 0
-		moveq r6, #-1  @; Carreguem -1 si ascii == false
-		movne r6, #45  @; Carreguem signe de negatiu en ascii si ascii == true
-		strb r6, [r4]  @; Fiquem el - (codi ASCII 45). No passa res si no es negatiu perque machacarem si es positiu
 		
 		cmp r0, #0  @; Comparem per veure si es negatiu
-		addlt r4, #1  @; Movem l'apuntador d'array una posicio per no machacar si realment es negatiu
+		movlt r1, #1  @; Deixem una marca de que estem en mode negatiu (modificacio a posteriori)
+		movge r1, #0  @; Deixem una marxa si no es aixi
 		neglt r0, r0  @; Si es negatiu el fem positiu per a quedarnos amb la magnitud
+		
+		cmp r7, #0  @; Comparem amb 0 per saber si estem en mode ascii
+		bne .LSeguentXifra  @; Si estem en mode ASCII passem a processar
+		
+		mov r6, #-1  @; Carreguem -1 si ascii == false
+		strb r6, [r4]  @; Fiquem el -1
+		
+		cmp r1, #1  @; Estem en negatiu
+		addeq r4, #1  @; Movem l'apuntador d'array una posicio per no machacar si estem en mode binari i num negatiu
 		
 		.LSeguentXifra:
 		
@@ -908,11 +930,11 @@ str_length:
 		push {r0-r2, lr}	@; guardar a pila possibles registres modificats 
 		
 		mov r1, #-1  @; longitud
-		.LBucleMemCopy:
+		.LBucleStrLength:
 		add r1, #1  @; Incrementem en 1 la longitud
 		ldrb r2, [r0, r1]
 		cmp r2, #0
-		bne .LBucleMemCopy
+		bne .LBucleStrLength
 		
 		mov r0, r1  @; fem el retorn
 		
