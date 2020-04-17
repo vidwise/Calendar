@@ -42,6 +42,9 @@ DATE_DAY_LSB   =  4
 @;--- .data. Non-zero Initialized data ---
 .data
 	diesPerMes:	.byte	31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+	quo: .word 0
+	mod: .word 0
+	
 
 
 @;-- .text. codi de les rutinas ---
@@ -65,10 +68,10 @@ DATE_DAY_LSB   =  4
 @;	Resultat:
 @;		R0: valor fc_date amb els camps inicialitzats segons paràmetres
 		.global create_date
-create_date:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
-		
+create_date:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+
+		push {r1-r4, lr}	@; guardar a pila possibles registres modificats 
 
 		@; Ajustat de valors
 		@; Any
@@ -93,16 +96,34 @@ create_date:
 		@; caldrà veure quants dies té aquest mes per veure els dies superiors
 		
 		@; calcular any en Ca2. 
-		cmp r0, #1
-		beq .LFiAbansDeCrist  @; Si es després del naixement de Jesús no cal fer res
-		neg r0, r0  @; Ca2
-		.LFiAbansDeCrist:
+		cmp r0, #0
+		negeq r1, r1  @; Si es 0 es abans de Crist per tant fem el Ca2 del valor
 		
-		@; //RF  FALTA CODIIII
+		@; Malabar de registres per a cridar a la funció days in month
+		mov r0, r2  @; Aquí ja no necessitem la dada de abans de Crist a r0
+		@; A r1 ja hi tenim ben colocat l'any en Ca2
+		bl days_in_month  @; r0 = dies_mes
+		cmp r0, r3  @; Mirem que els dies no se surtin de rang
+		movgt r0, r3  @; Si els dies passats per parametre son menors, ens quedem amb el parametre
 		
+		@; Combinem les dades en un sol registre
+		@; Coloquem dia
+		mov r0, r0, lsl #DATE_DAY_LSB  
+		
+		@; Coloquem any
+		mov r1, r1, lsl #DATE_YEAR_LSB
+		ldr r3, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
+		and r1, r1, r3  @; Matem els bits degut al Ca2
+		orr r0, r0, r1  @; Coloquem els bits de l'any al registre
+		
+		@; Coloquem mes
+		mov r2, r2, lsl #DATE_MONTH_LSB
+		orr r0, r0, r2  @; Coloquem els bits del mes al registre
+				
+		pop {r1-r4, pc}	@; recuperar de pila registres modificats i retornar
+
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
 
 
@@ -118,19 +139,20 @@ create_date:
 @;	Resultat:
 @;		R0: 1 si la data indicada és després de Crist; 0 altrament
 		.global is_after_Christ
-is_after_Christ:
-		push {r1, lr}	@; guardar a pila possibles registres modificats 
-		
+is_after_Christ:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+
+		push {r1, lr}	@; guardar a pila possibles registres modificats 
 
 		and r1, r0, #DATE_YEAR_SIGN_MASK  @; Apliquem máscara de "signe"
 		cmp r1, #0  @; Veiem si queda un 0 o no
 		moveq r0, #1  @; Si queda 0 no hi ha signe per tant després de Crist
 		movne r0, #0  @; Sino pues 1 perque si que és després de Crist
 		
+		pop {r1, pc}	@; recuperar de pila registres modificats i retornar
+
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -143,10 +165,10 @@ is_after_Christ:
 @;	Resultat:
 @;		R0: valor absolut (magnitud) del camp 'any' de la fc_date indicada (1..9999)
 		.global get_year_magnitude
-get_year_magnitude:
-		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
-		
+get_year_magnitude:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
 		
 		ldr r3, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
 		and r2, r0, r3  @; Ens quedem amb la info de l'any a r2
@@ -166,9 +188,10 @@ get_year_magnitude:
 
 		.LFiGetYear:
 		mov r0, r2  @; Tornem info a r0 per fer el retorn de la rutina
-		
-		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
+
 		pop {r1-r3, pc}	@; recuperar de pila registres modificats i retornar
+
+		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 
 @; -------------------------------------------------------- 
@@ -182,9 +205,9 @@ get_year_magnitude:
 @;		R0: valor (Ca2) del camp 'any' de la fc_date indicada (-9999..-1, 1..9999)
 		.global get_year_Ca2
 get_year_Ca2:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
-		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r1-r2, lr}	@; guardar a pila possibles registres modificats 
 
 		ldr r2, =DATE_YEAR_MASK  @; Carreguem constant (limitació ARM)
 		and r1, r0, r2  @; Ens quedem amb el camp year a r1
@@ -205,9 +228,10 @@ get_year_Ca2:
 		@; and r1, r1, r2  @; Forcem retornar un half-word
 		mov r0, r1  @; Per a fer el retorn de la funció
 		
+		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
+				
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -220,17 +244,18 @@ get_year_Ca2:
 @;	Resultat:
 @;		R0: valor del camp 'mes' de la fc_date indicada (1..12)
 		.global get_month
-get_month:
-		push {lr}	@; guardar a pila possibles registres modificats 
-		
+get_month:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {lr}	@; guardar a pila possibles registres modificats 
 
 		and r0, r0, #DATE_MONTH_MASK
 		mov r0, r0, lsr #DATE_MONTH_LSB
+		
+		pop {pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -244,16 +269,17 @@ get_month:
 @;		R0: valor del camp 'dia' de la fc_date indicada (1..28/29/30/31)
 		.global get_day
 get_day:
-		push {lr}	@; guardar a pila possibles registres modificats 
-		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {lr}	@; guardar a pila possibles registres modificats 
 
 		and r0, r0, #DATE_DAY_MASK
 		mov r0, r0, lsr #DATE_DAY_LSB
 
+		pop {pc}	@; recuperar de pila registres modificats i retornar
+
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {pc}	@; recuperar de pila registres modificats i retornar
 
 
 
@@ -270,11 +296,11 @@ get_day:
 @;	Resultat:
 @;		R0: 1 si l'any indicat és de traspàs/bixest; 0 altrament
 		.global is_leap_year
-is_leap_year:
-		push {r1-r5, lr}	@; guardar a pila possibles registres modificats 
-		
+is_leap_year:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
+		push {r1-r5, lr}	@; guardar a pila possibles registres modificats 
+
 		mov r3, r0  @; Movem al registre r3 per comoditat
 		cmp r3, #-46  @; Comparem amb -46
 		movlt r0, #0  @; No es any bixest
@@ -317,9 +343,10 @@ is_leap_year:
 		
 		.LFiIsLeapYear:
 		
+		pop {r1-r5, pc}	@; recuperar de pila registres modificats i retornar
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r5, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -333,11 +360,11 @@ is_leap_year:
 @;	Resultat:
 @;		R0: número de dies d'aquell mes (1..28/29/30/31) o 0 en cas de fora de rang
 		.global days_in_month
-days_in_month:
-		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
-		
+days_in_month:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
+		push {r1-r3, lr}	@; guardar a pila possibles registres modificats 
+
 		mov r2, r0  @; Guardem mes a un altre lloc per comoditat
 		mov r0, #0  @; resultat incorrecte fins que no es demostri el contrari
 		
@@ -348,7 +375,7 @@ days_in_month:
 		
 		ldr r3, =9999  @; Carreguem constant (limitació de ARM)
 		cmp r1, r3  
-		bhi .LFiDaysInMonth  @; Fi funció
+		bgt .LFiDaysInMonth  @; Fi funció
 		
 		cmp r1, #0
 		beq .LFiDaysInMonth  @; Fi funció
@@ -377,9 +404,10 @@ days_in_month:
 		
 		.LFiDaysInMonth:
 		
+		pop {r1-r3, pc}	@; recuperar de pila registres modificats i retornar
+		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r3, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -392,11 +420,11 @@ days_in_month:
 @;	Resultat:
 @;		R0: segle al qual pertany l'any indicat (-100..-1 / +1..+100) o 0 en cas d'any fora de rang
 		.global get_century_Ca2
-get_century_Ca2:
-		push {r1-r2, lr}	@; guardar a pila possibles registres modificats 
-		
+get_century_Ca2:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
+		push {r1-r2, lr}	@; guardar a pila possibles registres modificats 
+
 		mov r1, r0  @; Movem any a r1 per comoditat
 		mov r0, #0  @; Parametres incorrectes fins que no es demostri el contrari
 		
@@ -430,9 +458,10 @@ get_century_Ca2:
 		
 		.LFiGetCentury:
 
+		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
+
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -447,11 +476,10 @@ get_century_Ca2:
 @;	Resultat:
 @;		R0: dia de la setmana d'aquella data (1:dilluns..7:diumenge o 0 si data fora de rang)
 		.global week_day
-week_day:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
-		
+week_day:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 
+		push {r1-r4, r12, lr}	@; Cridem a una funció C (r1-r4, r12)
 		@; Malabars de registres per a cridar a la funció
 		mov r3, r0  @; r3 --> dies
 		mov r4, r1  @; r4 --> mes (necessitem guardar-ho perque sino ho perdrem)
@@ -483,10 +511,12 @@ week_day:
 		add r0, #1  @; Corregim sumant 1 per a que 1 --> dilluns ... 7 --> diumenge
 		
 		.LFiWeekDay:
+		
+		pop {r1-r4, r12, pc}	@; Cridem a una funció C (r1-r4, r12)
+
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
 
 
@@ -516,15 +546,125 @@ week_day:
 @;	   |30 31  0  0  0  0  0|	6a setmana de Març, dies 30 i 31, resta de dies amb 0
 @;
 		.global create_binary_calendar
-create_binary_calendar:
-		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
-		
+create_binary_calendar:		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
 
+		mov r4, r0  @; Guardem mes a un altre lloc per comoditat. r4 = mes
+		mov r0, #0  @; resultat incorrecte fins que no es demostri el contrari
+		
+		@; Any
+		ldr r5, =-9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r5
+		blt .LFiCreateCalendar  @; Fi funció
+		
+		ldr r5, =9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r5  
+		bgt .LFiCreateCalendar  @; Fi funció
+		
+		cmp r1, #0
+		beq .LFiCreateCalendar  @; Fi funció
+		
+		@; Mes
+		cmp r4, #1  
+		blt .LFiCreateCalendar  @; Fi funció
+		
+		cmp r4, #12
+		bhi .LFiCreateCalendar  @; Fi funció
+
+		@; A partir d'aqui els parametres son correctes
+		
+		@; Trobem el nombre de dies del mes
+		mov r0, r4  @; recarreguem mes a r0
+		bl days_in_month  @; r0 = nombre de dies que té aquell mes en concret
+		mov r8, r0  @; r8 = days in month
+		
+		@; Trobem el dia de la setmana inicial
+		@; malabars de registres
+		mov r0, #1  @; Carreguem dia 1
+		mov r5, r1  @; per comoditat r5 = any
+		mov r6, r2  @; per comoditat r6 = @array
+		mov r1, r4  @; recuperem mes com a segon argument
+		mov r2, r5  @; recuperem any com a tercer argument
+		bl week_day  @; r0 = [1-7] depenent del dia de la setmana inicial
+		mov r7, r0  @; r7 = dia de la setmana
+		
+		@; Generacio de la primera fila
+		
+		@; Mes
+		@; malabars de registres per a cridar a divmod
+		mov r0, r4  @; recarreguem mes
+		mov r1, #10  @; carreguem mes
+		ldr r2, =quo  @; carreguem punter de quocient
+		ldr r3, =mod  @; carreguem punter de modul
+		bl div_mod  @; r0 es plena de brossa inutil
+		
+		ldr r0, [r2]  @; Carreguem quocient
+		strb r0, [r6]  @; Guardem quocient a la primera pos
+		add r6, #1  @; incrementem apuntador
+		ldr r0, [r3]  @; carreguem modul
+		strb r0, [r6]  @; guardem modul a la segona posicio
+		add r6, #1  @; incrementem a la seguent posicio 
+		
+		@; any
+		@; malabars de registres per cridar a u32toString
+		@; void u32toString ( u32 number, char string[11], bool ascii )
+		mov r0, r5  @; carreguem el nombre
+		mov r1, r6  @; carreguem la direccio de l'array
+		mov r2, #0  @; Li diem que no volem ascii
+		cmp r0, #0  @; Si es un negatiu
+		blt .LNegatiu  @; cridem la funció directament
+		@; Sino (si es positiu)
+		strb r2, [r1]  @; Carreguem un 0 a la pos on estaria el signe
+		add r1, #1  @; Desplacem una posicio l'array per escriure mes endavant
+		.LNegatiu:
+		bl u32toString  @; registres inalterats
+		add r6, #5  @; Desplacem 5 posicions corresponents a l'any
+		
+		@; Primera setmana (zeros)
+		mov r0, #0  @; Carreguem un 0 per anar plenant
+		mov r1, #0  @; r1 = i = 0
+		.LBucleZerosSetmana:  @; Sempre fem una iteracio de mes pero tranki que despres machaquem
+		strb r0, [r6, r1]  @; guardem un 0 a array[i]
+		add r1, #1  @; desplacem l'index 1 pos
+		
+		cmp r1, r7  @; Comparem amb el dia inicial
+		bne .LBucleZerosSetmana   @; Si no es igual seguim iterant
+		
+		@; Dies del mes
+		sub r7, #1  @; Corregim una posicio per a indexar amb ella
+		add r6, r7  @; Anem a la pos on hem de començar a escriure els dies
+		
+		mov r0, #0  @; dia del mes i index
+		.LBucleDies:
+		add r0, #1  @; Incrementem 1 el dia
+		strb r0, [r6]  @; Escribim al calendari
+		add r6, #1  @; Incrementem l'apuntador
+		cmp r0, r8  @; comparem amb el nombre de dies
+		bne .LBucleDies  @; Fins que no haguem escrit l'últim dia no sortim
+		
+		@; Aqui ja hem escrit tot el calendari. Ara cal saber quants 0 de final cal posar
+		add r0, r7, r8  @; Sumem total de dies escrits
+		rsb r1, r0, #42  @; restem del total de dies
+		
+		@; Inicialitzacions
+		mov r0, #0  @; Movem a r0 un 0
+		@; A r1 hi tenim lindex que es el nombre de dies
+		.LBucleZerosFinal:
+		strb r0, [r6]  @; Guardem un 0
+		sub r1, #1  @; Decrementem 
+		add r6, #1
+		cmp r1, #0  @; comparem amb 0
+		bne .LBucleZerosFinal
+		
+		mov r0, #1  @; Hem pogut generar el calendari
+		
+		.LFiCreateCalendar:
+		
+		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
-
-		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
 
 
 @; -------------------------------------------------------- 
@@ -557,11 +697,92 @@ create_ascii_calendar:
 		push {r1-r12, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
-
+		
+		
+		
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r12, pc}	@; recuperar de pila registres modificats i retornar
+
+@; =============================================================
+@;   Rutines auxiliars
+@; =============================================================
+
+@; void u32toString ( u32 number, char string[11], bool ascii)
+@;     Converteix un nombre a String i el copia a la direcció rebuda per parametre
+@;     Yo me lo guiso yo me lo como --> la faig hardcoded com a mi em dona la gana
+@;     Limitacions i característiques:
+@;     - No fico caracters de final de string perque van directes al calendari
+@;     - No retorno longitud de caracters generats
+@;     - Si ascii = True ho fa pel format en ascii
+@;     - sino ho fa per a nombres int
+@;
+		.global u32toString
+u32toString:
+		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r0-r7, lr}	@; guardar a pila possibles registres modificats 
+		
+		@; Inicialitzacions
+		mov r7, r2  @; Movem el parametre boolea ascii per comoditat a r7
+		mov r4, r1  @; Movem el punter a r4 per comoditat
+		mov r5, #0  @; Num caracters copiats
+		mov r1, #10  @; Carreguem el divisor
+		ldr r2, =quo  @; Carreguem @ quocient
+		ldr r3, =mod  @; Carreguem @ residu
+		
+		@; Coloquem el negatiu i així ja ens oblidem
+		cmp r7, #0  @; Comparem amb 0
+		moveq r6, #-1  @; Carreguem -1 si ascii == false
+		movne r6, #45  @; Carreguem signe de negatiu en ascii si ascii == true
+		strb r6, [r4]  @; Fiquem el - (codi ASCII 45). No passa res si no es negatiu perque machacarem si es positiu
+		
+		cmp r0, #0  @; Comparem per veure si es negatiu
+		addlt r4, #1  @; Movem l'apuntador d'array una posicio per no machacar si realment es negatiu
+		neglt r0, r0  @; Si es negatiu el fem positiu per a quedarnos amb la magnitud
+		
+		.LSeguentXifra:
+		
+		bl div_mod  @; r0 = Brossa que no farem servir
+		ldr r0, [r2]  @; Regenerem el dividend que sera un ordre de magnitud menys a l'anterior operació
+		ldr r6, [r3]  @; Carreguem el mòdul a r6
+		
+		cmp r7, #0  @; Comparem amb 0 el parametre ascii
+		addne r6, #48  @; Si es true convertim a ASCII
+		
+		strb r6, [r4, r5]  @; Guardem caracter a la pos de l'array
+		add r5, #1  @; Incrementem en 1 el nombre de caràcters copiats
+		cmp r0, #0  @; Mirem si encara queden xifres per processar
+		bhi .LSeguentXifra
+		
+		@; En aquest punt del codi el nombre ja esta processat i les xifres estan invertides.
+		@; L'apuntador apunta per una posicio fora de l'array
+		
+		@; Inicialitzacions
+		mov r6, r5, lsr #1  @; Dividim entre dos r5 = mida, r6 = mida / 2
+		mov r1, #0  @; r1 = i = 0
+		
+		.LBucleInversio:
+		ldrb r0, [r4, r1]  @; Carreguem digit actual
+		@; Generem índex
+		sub r2, r5, r1
+		sub r2, #1  @; r2 = mida - i - 1
+		
+		ldrb r3, [r4, r2]  @; Carreguem de array[mida - i - 1]
+		strb r3, [r4, r1]  @; Guardem a array[i]
+		strb r0, [r4, r2]  @; Guardem digit a array[mida - i - 1]
+		
+		add r1, #1  @; Incrementem i. i++
+		
+		cmp r1, r6
+		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
+		
+		pop {r0-r7, pc}	@; recuperar de pila registres modificats i retornar
+
+		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
+
+	
 
 
 

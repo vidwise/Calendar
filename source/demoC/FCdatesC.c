@@ -406,8 +406,7 @@ u8 u32toString ( u32 number, char string[11] )
 	string[mida] = 0;	/* Sentinella de final de string */
 	
 		/* Invertir caràcters */
-	for ( i = 0; i < mida/2; i++ )
-	{
+	for ( i = 0; i < mida/2; i++ ){
 		digit = string[i];
 		string[i] = string[ mida-i-1 ];
 		string[ mida-i-1 ] = digit;
