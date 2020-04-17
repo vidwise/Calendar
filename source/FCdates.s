@@ -152,18 +152,18 @@ get_year_magnitude:
 		and r2, r0, r3  @; Ens quedem amb la info de l'any a r2
 		
 		and r1, r0, #DATE_YEAR_SIGN_MASK  @; Apliquem máscara de despres de Crist
-		cmp r1, #0  @; Mirem si hi ha bit de signe
+		cmp r1, #0  @; Mirem si es 0 (si es 0 es després de crist)
 		beq .LAnyDespresDeCrist
 		
 		@; Aqui tractem si es un any després de Jesús
-		mov r2, r2, lsr #DATE_YEAR_LSB  @; Posem bits al lloc
-		b .LFiGetYear  @; Marxem
-		
-		.LAnyDespresDeCrist:  @; Tractem si es després de Crist
 		orr r2, r2, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
 		mov r2, r2, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
 		neg r2, r2  @; Ca2
+		b .LFiGetYear  @; Marxem
 		
+		.LAnyDespresDeCrist:  @; Tractem si es després de Crist
+		mov r2, r2, lsr #DATE_YEAR_LSB  @; Posem bits al lloc
+
 		.LFiGetYear:
 		mov r0, r2  @; Tornem info a r0 per fer el retorn de la rutina
 		
@@ -195,14 +195,14 @@ get_year_Ca2:
 		@; Aqui tractem si té signe i per tant es un any abans de Crist
 		orr r1, r1, #DATE_YEAR_SIGN_EXT  @; Afegim els bits d'extensió
 		mov r1, r1, asr #DATE_YEAR_LSB  @; Posem bits a lloc amb extensió de signe
-		neg r1, r1  @; Ca2
 		b .LFiGetYearCa2  @; Anem al final de la funció
 
 		.LGetYearDespresDeCrist:
 		mov r1, r1, lsr #DATE_YEAR_LSB  @; Movem al lloc
 		
 		.LFiGetYearCa2:
-		@; and r1, r1, #0x0000FFFF  @; Forcem retornar un half-word
+		@;ldr r2, =0x0000FFFF  @; Carreguem constant (limitació ARM)
+		@; and r1, r1, r2  @; Forcem retornar un half-word
 		mov r0, r1  @; Per a fer el retorn de la funció
 		
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
@@ -284,6 +284,7 @@ is_leap_year:
 		and r2, r3, #0b11  @; Si r2 = 0, any multiple de 4
 		cmp r2, #0  @; Mirem si es 0
 		moveq r2, #1  @; Si es 0 fiquem true
+		movne r2, #0  @; Sino pues fiquem false
 		ldr r4, =1582  @; Carreguem constant (limiació ARM)
 		cmp r3, r4  @; comparem amb 1582
 		movle r0, r2  @; Si any menor o igual a 1582 carreguem a r0 si es multiple de 4 o no
@@ -296,6 +297,7 @@ is_leap_year:
 		bl FCmod  @; r0 = any % 100
 		cmp r0, #0
 		moveq r4, #1  @; Si es igual llavors es múltiple de 100 (true)
+		movne r4, #0  @; Si es diferent llavors posem a false
 		
 		@; Malabars de registres per a cridar a la funció per fer any % 400
 		mov r0, r3  @; Carreguem any a r0 (primer argument)
@@ -303,6 +305,7 @@ is_leap_year:
 		bl FCmod  @; r0 = any % 400
 		cmp r0, #0
 		moveq r5, #1  @; Si es igual llavors es múltiple de 400 (true)
+		movne r5, #0  @; Si es diferent llavors ho posem a false
 		
 		@; r2: Multiplicitat amb 4
 		@; r4: Multiplicitat amb 100
@@ -404,18 +407,17 @@ get_century_Ca2:
 		
 		ldr r2, =9999  @; Carreguem constant (limitació de ARM)
 		cmp r1, r2  
-		bhi .LFiGetCentury  @; Fi funció
+		bgt .LFiGetCentury  @; Fi funció
 		
 		cmp r1, #0
 		beq .LFiGetCentury  @; Fi funció
 		
 		@; A partir d'aqui estem amb paràmetres correctes
 		
-		.LFiGetCentury:
 		cmp r1, #0  
 		neglt r1, r1  @; Si es un negatiu el convertim a positiu
 		movlt r2, #-1  @; Carreguem un -1 per a després
-		movhi r2, #1  @; Carreguem un 1 per a després
+		movgt r2, #1  @; Carreguem un 1 per a després
 		
 		@; Malabars de registres per cridar a la divisió
 		mov r0, r1  @; Carreguem any
@@ -426,6 +428,8 @@ get_century_Ca2:
 		mov r1, r0  @; Carreguem a un altre registre per a mul (limitació ARM)
 		mul r0, r1, r2  @; Multipliquem segons el que hagim carregat a r2 previament
 		
+		.LFiGetCentury:
+
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
@@ -466,7 +470,7 @@ week_day:
 		blt .LFiWeekDay  @; Si ho són marxem de la funció
 		
 		cmp r3, r1  @; Mirem si els dies proporcionats estan fora de rang
-		bhi .LFiWeekDay  
+		bgt .LFiWeekDay  
 		
 		@; Aquí els paràmetres son correctes
 		@; Malabars de registres per a cridar a la funcio de divisio
