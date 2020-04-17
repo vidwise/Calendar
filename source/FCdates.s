@@ -699,8 +699,85 @@ create_ascii_calendar:
 		
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
+		mov r4, r0  @; Guardem mes a un altre lloc per comoditat. r4 = mes
+		mov r9, r3  @; r9 = Idioma
+		mov r0, #0  @; resultat incorrecte fins que no es demostri el contrari
 		
+		@; Any
+		ldr r5, =-9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r5
+		blt .LFiCreateCalendarASCII  @; Fi funció
 		
+		ldr r5, =9999  @; Carreguem constant (limitació de ARM)
+		cmp r1, r5  
+		bgt .LFiCreateCalendarASCII  @; Fi funció
+		
+		cmp r1, #0
+		beq .LFiCreateCalendarASCII  @; Fi funció
+		
+		@; Mes
+		cmp r4, #1  
+		blt .LFiCreateCalendarASCII  @; Fi funció
+		
+		cmp r4, #12
+		bhi .LFiCreateCalendarASCII  @; Fi funció
+
+		@; A partir d'aqui els parametres son correctes
+		
+		@; Trobem el nombre de dies del mes
+		mov r0, r4  @; recarreguem mes a r0
+		bl days_in_month  @; r0 = nombre de dies que té aquell mes en concret
+		mov r8, r0  @; r8 = days in month
+		
+		@; Trobem el dia de la setmana inicial
+		@; malabars de registres
+		mov r0, #1  @; Carreguem dia 1
+		mov r5, r1  @; per comoditat r5 = any
+		mov r6, r3  @; per comoditat r6 = @array
+		mov r1, r4  @; recuperem mes com a segon argument
+		mov r2, r5  @; recuperem any com a tercer argument
+		bl week_day  @; r0 = [1-7] depenent del dia de la setmana inicial
+		mov r7, r0  @; r7 = dia de la setmana
+
+		@; REGISTRES
+		@; r4 --> mes
+		@; r5 --> any
+		@; r6 --> @array del calendari
+		@; r7 --> dia inicial de la setmana
+		@; r8 --> days in month
+		@; r9 --> idioma
+		
+		@; Plenem tot despais
+		mov r0, #0  @; index
+		mov r1, #32  @; espai
+		
+		.LBucleEspais:
+		strb r1, [r6, r0]  @; Anem guardant espais al calendari
+		add r0, #1  @; incrementem index
+		
+		cmp r0, #160  @; Mirem si estem fora del calendari
+		bne .LBucleEspais  @; Sino tornem a començar
+		
+		@; Generacio de la primera fila
+		
+		ldr r0, =monthNames  @; Punter a punters 
+		mov r2, #48  @; 12 punters, de 4 bytes cadascun (limitació mul)
+		mul r1, r9, r2  @; Generem index a l'array de punters de l'idioma que toca
+		add r0, r1  @; Anem fins al principi de l'array que correspongui segons idioma
+		sub r2, r4, #1  @; Restem 1 per indexar a l'array
+		mov r2, r2, lsl #2  @; Multipliquem per 4 perque son punters de 4 bytes
+		add r0, r2  @; Punter de punters del mes adequat en lidioma adequat
+		ldr r0, [r0]  @; Punter a l'array de caracters
+		mov r1, r0  @; Malabar de registres per cridar a str_length
+		bl str_length  @; r0 nombre de caracters a copiar
+		
+		mov r2, r0  @; Coloquem el nombre de caracters a copiar
+		mov r0, r1  @; Coloquem punter al string del nom del mes
+		mov r1, r6  @; Coloquem el punter al calendari
+		bl mem_copy  @; Copiem nom
+		add r6, r2  @; movem el punter la longitud de caracters que haguem copiar
+		
+		.LFiCreateCalendarASCII:
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
@@ -840,7 +917,27 @@ mem_copy:
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 
+@; u32 str_length (char *string)
+@;     Retorna el número de caràcters de "string" 
+@; 
+		.global str_length
+str_length:
+		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r0-r2, lr}	@; guardar a pila possibles registres modificats 
+		
+		mov r1, #-1  @; longitud
+		.LBucleStrLength:
+		add r1, #1  @; Incrementem en 1 la longitud
+		ldrb r2, [r0, r1]
+		cmp r2, #0
+		bne .LBucleStrLength
+		
+		mov r0, r1  @; fem el retorn
+		
+		pop {r0-r2, pc}	@; recuperar de pila registres modificats i retornar
 
+		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
 
 .data
