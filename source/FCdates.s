@@ -709,7 +709,7 @@ create_ascii_calendar:
 @;   Rutines auxiliars
 @; =============================================================
 
-@; void u32toString ( u32 number, char string[11], bool ascii)
+@; void u32toString ( u32 number, char string[11], bool ascii, uint numxifres)
 @;     Converteix un nombre a String i el copia a la direcció rebuda per parametre
 @;     Yo me lo guiso yo me lo como --> la faig hardcoded com a mi em dona la gana
 @;     Limitacions i característiques:
@@ -725,6 +725,7 @@ u32toString:
 		push {r0-r7, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; Inicialitzacions
+		mov r8, r3  @; Movem el nombre de xifres a r8 per comoditat
 		mov r7, r2  @; Movem el parametre boolea ascii per comoditat a r7
 		mov r4, r1  @; Movem el punter a r4 per comoditat
 		mov r5, #0  @; Num caracters copiats
