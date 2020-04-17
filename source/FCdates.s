@@ -801,7 +801,7 @@ create_ascii_calendar:
 u32toString:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		push {r0-r9, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r9, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; Inicialitzacions
 		mov r8, r3  @; Movem el nombre de xifres a r8 per comoditat
@@ -889,8 +889,9 @@ u32toString:
 		bne .LBucleZerosDesplasament
 		
 		.LFitoString:
+		mov r0, r5  @; retorn de la func
 		
-		pop {r0-r9, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r9, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
