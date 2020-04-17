@@ -820,7 +820,7 @@ mem_copy:
 		.LBucleMemCopy:
 		sub r2, #1
 		ldrb r3, [r0, r2]
-		strb r3, [r0, r2]
+		strb r3, [r1, r2]
 		
 		cmp r2, #0
 		bne .LBucleMemCopy
