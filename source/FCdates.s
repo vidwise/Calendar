@@ -723,7 +723,7 @@ create_ascii_calendar:
 u32toString:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		push {r0-r8, lr}	@; guardar a pila possibles registres modificats 
+		push {r0-r9, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; Inicialitzacions
 		mov r8, r3  @; Movem el nombre de xifres a r8 per comoditat
@@ -735,14 +735,20 @@ u32toString:
 		ldr r3, =mod  @; Carreguem @ residu
 		
 		@; Coloquem el negatiu i així ja ens oblidem
-		cmp r7, #0  @; Comparem amb 0
-		moveq r6, #-1  @; Carreguem -1 si ascii == false
-		movne r6, #45  @; Carreguem signe de negatiu en ascii si ascii == true
-		strb r6, [r4]  @; Fiquem el - (codi ASCII 45). No passa res si no es negatiu perque machacarem si es positiu
+		mov r6, #-1  @; Carreguem -1 
+		strb r6, [r4]  @; Fiquem el -1. No passa res perque machacarem si no es el cas
 		
-		cmp r0, #0  @; Comparem per veure si es negatiu
+		cmp r7, #0  @; Comparem per veure si ascii
+		cmpne r0, #0  @; Si es mode ASCII comparem el nombre
+		neglt r0, r0  @; Neguem el nombre si es mes petit que 0. Aquesta instruccio es podria executar en plan troll pero en principi ens passen boolea. 
+		
+		cmp r7, #0  @; Tornem a actualitzar els flags
+		bne .LSeguentXifra  
+		@; Aqui estem en mode binari
+		
+		cmp r0, #0
 		addlt r4, #1  @; Movem l'apuntador d'array una posicio per no machacar si realment es negatiu
-		neglt r0, r0  @; Si es negatiu el fem positiu per a quedarnos amb la magnitud
+		neglt r0, r0
 		
 		.LSeguentXifra:
 		
@@ -803,7 +809,7 @@ u32toString:
 		
 		.LFitoString:
 		
-		pop {r0-r8, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r0-r9, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
