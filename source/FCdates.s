@@ -786,6 +786,9 @@ u32toString:
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
 		
+		cmp r7, #1  @; Mirem Si estem en mode ASCII
+		beq .LFitoString  @; Si es aixi marxem perque no em de fer res mes
+		
 		cmp r8, r5  @; Comparem les xifres esperades amb les escrites
 		beq .LFitoString
 		
