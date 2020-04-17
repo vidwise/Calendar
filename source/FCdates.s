@@ -722,7 +722,7 @@ create_ascii_calendar:
 u32toString:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		push {r0-r7, lr}	@; guardar a pila possibles registres modificats 
+		push {r0-r8, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; Inicialitzacions
 		mov r8, r3  @; Movem el nombre de xifres a r8 per comoditat
@@ -779,7 +779,7 @@ u32toString:
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
 		
-		pop {r0-r7, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r0-r8, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
