@@ -780,10 +780,26 @@ u32toString:
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
 		
-		cmp r8, r5  @; Comparem les xifres espereades amb les escrites
+		cmp r8, r5  @; Comparem les xifres esperades amb les escrites
 		beq .LFitoString
 		
+		@; Aqui el nombre de xifres copiades es diferent de les que s'han de plenar
+		sub r3, r8, r5  @; Guardem diferencia a r3
+		mov r0, r4  @; Movem punter a r0
+		add r1, r0, r3  @; Movem el punter el que indiqui la dif
+		mov r2, r5  @; Indiquem els caracters a copiar
+		bl mem_copy  @; Copiem aquella zona de memoria
 		
+		@; I ara plenem de 0s
+		@; Inicialitzacions
+		mov r1, #0  @; 0 d'escriptura
+		sub r3, #1  @; restem una pos per a indexar
+		
+		.LBucleZerosDesplasament:
+		strb r1, [r0, r3]  @; fiquem un 0
+		sub r3, #1  @; restem 1
+		cmp r3, #-1  @; Mirem si ja estem fora del array
+		bne .LBucleZerosDesplasament
 		
 		.LFitoString:
 		
