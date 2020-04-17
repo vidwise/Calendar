@@ -782,7 +782,30 @@ u32toString:
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
-	
+
+@; void mem_copy (u8 *from, u8 *to, u32 count)
+@;     Copia "count" bytes de "from" cap a "to" 
+@;
+		.global mem_copy
+mem_copy:
+		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
+		
+		push {r0-r3, lr}	@; guardar a pila possibles registres modificats 
+		
+		.LBucleMemCopy:
+		sub r2, #1
+		ldrb r3, [r0, r2]
+		strb r3, [r0, r2]
+		
+		cmp r2, #0
+		bne .LBucleMemCopy
+		
+		
+		pop {r0-r3, pc}	@; recuperar de pila registres modificats i retornar
+
+		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
+
+
 
 
 
