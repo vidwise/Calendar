@@ -709,7 +709,7 @@ create_ascii_calendar:
 @;   Rutines auxiliars
 @; =============================================================
 
-@; void u32toString ( u32 number, char string[11], bool ascii)
+@; void u32toString ( u32 number, char string[11], bool ascii, uint xifres)
 @;     Converteix un nombre a String i el copia a la direcció rebuda per parametre
 @;     Yo me lo guiso yo me lo como --> la faig hardcoded com a mi em dona la gana
 @;     Limitacions i característiques:
@@ -722,9 +722,10 @@ create_ascii_calendar:
 u32toString:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		push {r0-r7, lr}	@; guardar a pila possibles registres modificats 
+		push {r0-r8, lr}	@; guardar a pila possibles registres modificats 
 		
 		@; Inicialitzacions
+		mov r8, r3  @; Movem el nombre de xifres a r8 per comoditat
 		mov r7, r2  @; Movem el parametre boolea ascii per comoditat a r7
 		mov r4, r1  @; Movem el punter a r4 per comoditat
 		mov r5, #0  @; Num caracters copiats
@@ -778,7 +779,28 @@ u32toString:
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
 		
-		pop {r0-r7, pc}	@; recuperar de pila registres modificats i retornar
+		cmp r5, r8  @; Comparem nombre de xifres a plenar
+		beq .LFitoString  @; Si son iguals marxem i ja hem acabat
+		@; sino
+		sub r2, r8, r5  @; Guardem diferencia a r2
+		mov r0, r4  @; Movem punter a r0
+		add r1, r0, r2  @; Movem el punter el que indiqui la dif
+		bl mem_copy  @; Copiem aquella zona de memoria
+		
+		@; I ara plenem de 0s
+		@; Inicialitzacions
+		mov r1, #0  @; 0 d'escriptura
+		sub r2, #1  @; restem una pos per a indexar
+		
+		.LBucleZerosDesplasament:
+		strb r1, [r0, r2]  @; fiquem un 0
+		sub r2, #1  @; restem 1
+		cmp r2, #-1  @; Mirem si ja estem fora del array
+		bne .LBucleZerosDesplasament
+		
+		.LFitoString:
+		
+		pop {r0-r8, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
