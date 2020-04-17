@@ -700,7 +700,7 @@ create_ascii_calendar:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
 		mov r4, r0  @; Guardem mes a un altre lloc per comoditat. r4 = mes
-		mov r9, r3  @; r9 = Idioma
+		mov r9, r2  @; r9 = Idioma
 		mov r0, #0  @; resultat incorrecte fins que no es demostri el contrari
 		
 		@; Any
@@ -746,6 +746,7 @@ create_ascii_calendar:
 		@; r7 --> dia inicial de la setmana
 		@; r8 --> days in month
 		@; r9 --> idioma
+		@; r10 --> conteig de caracters a la primera fila
 		
 		@; Plenem tot despais
 		mov r0, #0  @; index
@@ -776,7 +777,14 @@ create_ascii_calendar:
 		mov r0, r1  @; Coloquem punter al string del nom del mes
 		mov r1, r6  @; Coloquem el punter al calendari
 		bl mem_copy  @; Copiem nom
-		add r6, r2  @; movem el punter la longitud de caracters que haguem copiar
+		add r10, #1  @; Afegim una casella mes per a l'espai
+		add r1, r10  @; Movem el punter fins a l'any
+		mov r0, r5  @; carreguem el nombre a convertir en string
+		mov r2, #1  @; ASCII -> true
+		@; No cal carregar r3 perque en mode ASCII no es fan servir
+		bl u32toString
+		add r10, r0  @; Comptem els caracters llegits
+		
 		
 		.LFiCreateCalendarASCII:
 
@@ -926,7 +934,7 @@ mem_copy:
 str_length:
 		@; ==vvvvvvvv== INICI codi assemblador de la rutina ==vvvvvvvv==
 		
-		push {r0-r2, lr}	@; guardar a pila possibles registres modificats 
+		push {r1-r2, lr}	@; guardar a pila possibles registres modificats 
 		
 		mov r1, #-1  @; longitud
 		.LBucleStrLength:
@@ -937,7 +945,7 @@ str_length:
 		
 		mov r0, r1  @; fem el retorn
 		
-		pop {r0-r2, pc}	@; recuperar de pila registres modificats i retornar
+		pop {r1-r2, pc}	@; recuperar de pila registres modificats i retornar
 
 		@; ==^^^^^^^^== FINAL codi assemblador de la rutina ==^^^^^^^^==
 
