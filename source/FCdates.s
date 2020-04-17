@@ -770,6 +770,7 @@ create_ascii_calendar:
 		ldr r0, [r0]  @; Punter a l'array de caracters
 		mov r1, r0  @; Malabar de registres per cridar a str_length
 		bl str_length  @; r0 nombre de caracters a copiar
+		mov r10, r0  @; r10 caracters que ocupa el nom del mes
 		
 		mov r2, r0  @; Coloquem el nombre de caracters a copiar
 		mov r0, r1  @; Coloquem punter al string del nom del mes
