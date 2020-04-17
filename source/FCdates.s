@@ -613,6 +613,7 @@ create_binary_calendar:
 		mov r0, r5  @; carreguem el nombre
 		mov r1, r6  @; carreguem la direccio de l'array
 		mov r2, #0  @; Li diem que no volem ascii
+		mov r3, #4  @; Hard-codegem que esperem 4 xifres
 		cmp r0, #0  @; Si es un negatiu
 		blt .LNegatiu  @; cridem la funció directament
 		@; Sino (si es positiu)
@@ -778,6 +779,13 @@ u32toString:
 		
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
+		
+		cmp r8, r5  @; Comparem les xifres espereades amb les escrites
+		beq .LFitoString
+		
+		
+		
+		.LFitoString:
 		
 		pop {r0-r8, pc}	@; recuperar de pila registres modificats i retornar
 
