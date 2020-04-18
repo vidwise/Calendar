@@ -784,7 +784,78 @@ create_ascii_calendar:
 		@; No cal carregar r3 perque en mode ASCII no es fan servir
 		bl u32toString
 		add r10, r0  @; Comptem els caracters llegits
+		add r10, #1  @; Mes un per passar a la seguent paraula
 		
+		@; AC/DC \m/
+		cmp r5, #0
+		movlt r0, #65  @; Carreguem una A
+		movgt r0, #68  @; Carreguem una D
+		strb r0, [r6, r10]  @; Guardem la primera lletra
+		add r10, #1  @; Afegim un mes
+		mov r0, #67  @; Carreguem una C
+		strb r0, [r6, r10]  @; Guardem la C
+		
+		@; Seguent linia
+		add r6, #20  @; Podem hardcodejar perque sabem que ocupen 20. Ara la direccio de l'array calendari apunta a
+		ldr r0, =weekDaysNames  @; Carreguem dies de la setmana
+		mov r1, #14  @; Carreguem 14 que es el que ocupa cada linia de dies
+		mul r2, r1, r9  @; Multipliquem per arribar a l'índex que toca segons idioma
+		add r0, r2  @; desplacem index fins a la tira de dies segons lidioma que ens passen
+		
+		@; r0 array origen
+		mov r3, #0  @; r1 = i = 0
+		mov r2, #2  @; Sempre copiem dos caracters
+		mov r1, r6  @; Carreguem @ de l'array calendari desti a r1
+		
+		.LBucleDiesSetmana:
+		bl mem_copy
+		add r0, #2  @; Desplacem 2 l'array dies
+		add r1, #3  @; Pero 3 per a l'array calendari
+		add r3, #1  @; Sumem un al comptador
+		
+		cmp r3, #7  @; Comparem amb 7
+		bne .LBucleDiesSetmana
+		sub r1, #1  @; Restem 1 per apuntar a la primera fila de nombres
+		mov r6, r1  @; Actualitzem direccio del calendari
+		
+		@; Primera linia de nombres
+		mov r1, #3  @; carreguem un 3 (limitacio mul)
+		sub r7, #1  @; dia inicial de la setmana
+		mul r0, r1, r7   @; multipliquem per saber desplaçament
+		add r6, r0  @; Movem fins al dia que toca
+		mov r1, r6  @; Ficarem l'array desti a r1 per a poder trucar a la rutina tostring amb facilitat
+		
+		mov r2, #1  @; ASCII = true
+		mov r0, #1  @; Dia del mes (i comptador)
+		add r8, #1  @; Corregim de 1 perque fem un do while
+		.LBucleDiesNombres:
+			cmp r0, #10  @; comparem el dia actual amb el 10
+			addlt r1, #1  @; Desplacem espai si es un nombre sense desenes	
+			mov r4, r0  @; Salvem registre
+			bl u32toString
+			mov r0, r4  @; regenerem registre
+			cmp r0, #10  @; comparem el dia actual amb el 10
+			addlt r1, #1  @; Desplacem espai si es un nombre sense desenes	
+			addge r1, #2  @; Si es de dues xifres desplacem dos espais
+
+			@; malabars de registres
+			mov r4, r0  @; Guardem el valor del dia a r4
+			add r0, r7  @; Sumem amb el desplaçament inicial
+			mov r5, r1  @; Salvem l'array a r5 
+			mov r1, #7  @; Carreguem un 7
+			bl FCmod
+			cmp r0, #0  @; Comparem el modul de la divisio amb 0
+			addne r5, #1  @; Si no estem al final d'una columna desplacem un espai
+			mov r1, r5  @; regenerem l'array
+			mov r0, r4  @; regenerem el dia
+			
+			add r0, #1  @; Augmentem en 1 el dia
+		cmp r0, r8  @; Mirem quan hem acabat de copiar dies de la setmana
+		bne .LBucleDiesNombres
+		
+		@; r0 --> dia que hem d'escriure a continuació
+		@; r1 --> @ al calendari, just a on esta el nombre 
+		mov r0, #1  @; Hem creat calendari amb exit
 		
 		.LFiCreateCalendarASCII:
 
@@ -853,6 +924,9 @@ u32toString:
 		@; En aquest punt del codi el nombre ja esta processat i les xifres estan invertides.
 		@; L'apuntador apunta per una posicio fora de l'array
 		
+		cmp r5, #1
+		beq .LNoInversio
+		
 		@; Inicialitzacions
 		mov r6, r5, lsr #1  @; Dividim entre dos r5 = mida, r6 = mida / 2
 		mov r1, #0  @; r1 = i = 0
@@ -871,6 +945,8 @@ u32toString:
 		
 		cmp r1, r6
 		bne .LBucleInversio  @; En principi sortim del bucle quan siguin iguals
+		
+		.LNoInversio:
 		
 		cmp r7, #1  @; Mirem Si estem en mode ASCII
 		beq .LFitoString  @; Si es aixi marxem perque no em de fer res mes
